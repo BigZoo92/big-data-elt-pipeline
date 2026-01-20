@@ -9,7 +9,7 @@ Ce projet met en place un mini pipeline ELT sur des données d’achats d’éle
 - MLflow pour suivre les runs d’entraînement (advisor / predictor).
 
 ---
-## Données et features
+## Screen résultat
 <img width="1907" height="862" alt="Capture d&#39;écran 2026-01-20 161155" src="https://github.com/user-attachments/assets/7b45131e-92e5-4cff-90a2-bbccb678bdba" />
 <img width="1904" height="1061" alt="fb7f9cf2-1ae1-4af4-b5da-ff3a1585c863" src="https://github.com/user-attachments/assets/985b8475-b3cb-43ab-aafd-18e830a0f6f4" />
 <img width="1918" height="867" alt="Capture d&#39;écran 2026-01-20 161535" src="https://github.com/user-attachments/assets/1c2309b9-3727-4740-b9e8-836255a5405a" />
