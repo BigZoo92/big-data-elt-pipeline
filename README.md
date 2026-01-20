@@ -48,8 +48,10 @@
 
 ## ML & entraînement
 
-- Scripts : `python scripts/train_predictor.py` et `python scripts/train_advisor.py` (via runner : `docker compose ... run --rm runner python scripts/train_predictor.py`).
-- Les runs/artefacts sont stockés dans `./mlruns` (monté dans le conteneur MLflow). UI : http://localhost:5001.
+- Scripts : `python scripts/train_predictor.py` (probabilité de ré-achat / valeur attendue) et `python scripts/train_advisor.py` (segmentation + recommandations churn/upsell simples). Exécutable via runner : `docker compose ... run --rm runner python scripts/train_predictor.py`.
+- Données : s'appuient sur la gold layer (features RFM, montants, recency) pour entraîner des modèles scikit-learn rapides.
+- Suivi : chaque run logue paramètres, métriques (AUC/RMSE selon le script), artefacts et modèle dans `./mlruns` (volume monté). UI : http://localhost:5001.
+- Prédictions : les modèles écrivent les scores/segments exportés en CSV/Parquet dans le dossier d'output prévu par les scripts, réutilisables ensuite (le dashboard actuel consomme la gold/serving).
 
 ## Benchmarks
 
