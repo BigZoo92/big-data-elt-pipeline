@@ -40,7 +40,7 @@ def health():
     try:
         _db().command("ping")
         status = "ok"
-    except Exception as exc:  # pragma: no cover - defensive
+    except Exception as exc:
         return jsonify({"status": "down", "error": str(exc)}), 503
     return jsonify({"status": status})
 

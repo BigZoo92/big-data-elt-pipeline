@@ -1,7 +1,3 @@
-"""
-Gold Spark : features RFM 12m, scoring heuristique et agrégations business.
-Ecrit dans un prefix 'spark' pour ne pas impacter la pipeline pandas.
-"""
 from typing import Dict, Tuple
 
 import pyspark.sql.functions as F

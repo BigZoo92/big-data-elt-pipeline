@@ -1,8 +1,3 @@
-"""
-Benchmark Pandas vs Spark (bronze -> silver -> gold).
-- Mesure les temps de bout en bout et stocke data/metrics/benchmark.json.
-- Option --scale pour dupliquer achats en memoire avant ingestion (sans toucher les sources).
-"""
 from __future__ import annotations
 
 import argparse
@@ -31,9 +26,6 @@ from flows_spark.silver_transformation_spark import silver_transformation_spark
 
 
 def _duplicate_sources(scale: int) -> Tuple[str, int]:
-    """
-    Duplique achats scale x pour stress-test sans toucher data/sources.
-    """
     if scale <= 1:
         base = Path("data") / "sources"
         achats_rows = sum(1 for _ in open(base / "achats.csv")) - 1

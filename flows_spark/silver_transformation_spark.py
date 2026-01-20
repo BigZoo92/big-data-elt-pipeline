@@ -1,6 +1,3 @@
-"""
-Silver Spark : nettoyage basique sur clients / achats.
-"""
 from typing import Dict, List, Set, Tuple
 
 import pyspark.sql.functions as F

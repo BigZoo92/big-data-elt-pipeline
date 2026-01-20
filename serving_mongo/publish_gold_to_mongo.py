@@ -1,8 +1,3 @@
-"""
-Publisher: lit la couche gold (MinIO en priorité, fallback local) et alimente MongoDB.
-- Collections "flat", 1 par table gold + agrégats dérivés (daily/weekly/distribution/monthly_growth).
-- Idempotent : upsert sur les tables volumineuses (fact/dim/features/scores), replace sur les agrégats.
-"""
 from __future__ import annotations
 
 import json
@@ -61,7 +56,6 @@ INDEXES = {
 
 
 def _read_parquet(object_name: str) -> pd.DataFrame | None:
-    # Try MinIO first
     try:
         client = get_minio_client()
         obj = client.get_object(BUCKET_GOLD, object_name)
@@ -70,7 +64,6 @@ def _read_parquet(object_name: str) -> pd.DataFrame | None:
         obj.release_conn()
         return pd.read_parquet(BytesIO(data))
     except Exception as exc_minio:
-        # Fallback local
         for base in LOCAL_GOLD_DIRS:
             candidate = base / object_name
             if candidate.exists():
@@ -226,7 +219,6 @@ def publish() -> None:
         "monthly_growth": _build_monthly_growth(ca_monthly),
     }
 
-    # Upsert heavy tables
     heavy_tables = {
         "gold_fact_achats": (fact, "id_achat"),
         "gold_dim_clients": (gold.get("dim_clients.parquet"), "id_client"),
@@ -238,7 +230,6 @@ def publish() -> None:
         count = _upsert_by_key(db[coll_name], records, key)
         print(f"{coll_name}: upserté {count} documents (key={key})")
 
-    # Replace collections for aggregates
     replace_tables = {
         "gold_segment_summary": gold.get("segment_summary.parquet"),
         "gold_monthly": ca_monthly,

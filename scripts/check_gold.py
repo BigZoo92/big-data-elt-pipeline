@@ -1,8 +1,3 @@
-"""
-Sanity check minimal de la couche gold (MinIO).
-- Verifie la presence des fichiers Parquet attendus.
-- Controle quelques colonnes cles, montants et dates.
-"""
 from io import BytesIO
 
 import pandas as pd
@@ -66,7 +61,7 @@ def main() -> None:
     for object_name, required_cols in EXPECTED_COLUMNS.items():
         try:
             df = _read_parquet(client, object_name)
-        except Exception as exc:  # pragma: no cover - quick check script
+        except Exception as exc:
             statuses.append((object_name, False, f"absent ou illisible ({exc})"))
             continue
 

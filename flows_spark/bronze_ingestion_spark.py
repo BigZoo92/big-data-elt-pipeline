@@ -1,6 +1,3 @@
-"""
-Bronze Spark : copie des CSV locaux vers bronze (S3A si possible, sinon local).
-"""
 from pathlib import Path
 from typing import Dict
 

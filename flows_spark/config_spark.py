@@ -1,8 +1,3 @@
-"""
-Configuration Spark (MinIO S3A avec fallback local).
-- Par defaut on tente S3A (SPARK_STORAGE_MODE=s3) puis fallback local si echec.
-- Local fallback : data/spark_lake/<layer>.
-"""
 from __future__ import annotations
 
 import os
@@ -16,15 +11,14 @@ from pyspark.sql import SparkSession
 tmp = Path("data") / "spark_tmp"
 tmp.mkdir(parents=True, exist_ok=True)
 
-# Buckets identiques a la pipeline Pandas
 BUCKET_SOURCES = "sources"
 BUCKET_BRONZE = "bronze"
 BUCKET_SILVER = "silver"
 BUCKET_GOLD = "gold"
 
-STORAGE_MODE = os.getenv("SPARK_STORAGE_MODE", "s3")  # "s3" ou "local"
+STORAGE_MODE = os.getenv("SPARK_STORAGE_MODE", "s3")
 LOCAL_BASE = Path("data") / "spark_lake"
-SPARK_PREFIX = "spark"  # prefix dans les buckets pour eviter collision
+SPARK_PREFIX = "spark"
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -41,9 +35,6 @@ AWS_PACKAGES = (
 
 
 def create_spark_session(app: str = "spark_pipeline") -> SparkSession:
-    """
-    Cree une SparkSession configuree pour MinIO S3A avec fallback local.
-    """
     secure = "true" if MINIO_SECURE else "false"
     spark = (
         SparkSession.builder.master(SPARK_MASTER_URL)
@@ -76,10 +67,6 @@ def _local_path(layer: str, object_name: str) -> str:
 
 
 def pick_path(layer: str, object_name: str) -> Tuple[str, str]:
-    """
-    Retourne (primary, fallback) paths pour un object.
-    primary = S3 si mode s3, sinon local.
-    """
     primary = _s3_path({BUCKET_BRONZE: BUCKET_BRONZE, BUCKET_SILVER: BUCKET_SILVER, BUCKET_GOLD: BUCKET_GOLD, BUCKET_SOURCES: BUCKET_SOURCES}.get(layer, layer), object_name)
     fallback = _local_path(layer, object_name)
     if STORAGE_MODE == "local":
@@ -93,14 +80,11 @@ def ensure_local_dirs() -> None:
 
 
 def write_with_fallback(df, primary_path: str, fallback_path: str, fmt: str = "parquet", mode: str = "overwrite") -> str:
-    """
-    Tente d'ecrire sur primary, sinon fallback local.
-    """
     try:
         df.write.format(fmt).mode(mode).save(primary_path)
         print(f"Written to {primary_path}")
         return primary_path
-    except Exception as exc:  # pragma: no cover - defensive fallback
+    except Exception as exc:
         print(f"[WARN] Primary write failed ({exc}); fallback to {fallback_path}")
         ensure_local_dirs()
         df.write.format(fmt).mode(mode).save(fallback_path)
@@ -110,7 +94,7 @@ def write_with_fallback(df, primary_path: str, fallback_path: str, fmt: str = "p
 def read_with_fallback(spark, primary_path: str, fallback_path: str, fmt: str = "parquet"):
     try:
         return spark.read.format(fmt).load(primary_path)
-    except Exception as exc:  # pragma: no cover - defensive fallback
+    except Exception as exc:
         print(f"[WARN] Read primary failed ({exc}); trying fallback {fallback_path}")
         if fmt == "csv":
             return spark.read.format(fmt).option("header", True).load(fallback_path)

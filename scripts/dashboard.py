@@ -1,10 +1,3 @@
-"""
-Dashboard Streamlit (gold MinIO + API MongoDB) orienté action :
-- KPIs business: CA, clients, achats, panier moyen.
-- Segmentation RFM (propension 12m) + top opportunités.
-- Source principale = API Flask (Mongo). Fallback Parquet direct conservé.
-- Onglet Benchmark refresh : API vs Parquet.
-"""
 from __future__ import annotations
 
 import json
@@ -454,7 +447,7 @@ def main() -> None:
         if api_data:
             data = api_data
             kpis = api_kpis
-            data["fact"] = None  # pas de fact complet via API
+            data["fact"] = None
         else:
             active_source = "Parquet direct"
 

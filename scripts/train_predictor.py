@@ -1,9 +1,3 @@
-"""
-Client scoring orienté retail durable (électroménager).
-- Objectifs: propension de ré-achat 12 mois + valeur attendue 12 mois.
-- Heuristique RFM (pas de churn 90j, pas de modèle lourd).
-"""
-
 import argparse
 import json
 import logging
@@ -22,9 +16,6 @@ LOG = logging.getLogger("predictor")
 HORIZON_DAYS = 365
 
 
-# -----------------------
-# I/O helpers
-# -----------------------
 def detect_column(df: pd.DataFrame, candidates: Sequence[str], required: bool = True) -> Optional[str]:
     cols = {c.lower(): c for c in df.columns}
     for cand in candidates:
@@ -91,9 +82,6 @@ def load_and_standardize(clients_path: Path, achats_path: Path) -> Tuple[pd.Data
     return clients, achats
 
 
-# -----------------------
-# Feature engineering
-# -----------------------
 def _normalize_zero_one(series: pd.Series) -> pd.Series:
     if series.empty:
         return series
@@ -178,9 +166,6 @@ def score_clients(features: pd.DataFrame, horizon_days: int = HORIZON_DAYS) -> p
     return scored
 
 
-# -----------------------
-# Reporting
-# -----------------------
 def summarize_segments(scored: pd.DataFrame) -> pd.DataFrame:
     return (
         scored.groupby("segment_label")
@@ -281,9 +266,6 @@ def write_outputs(
     return preds_path, summary_path, metrics_path, report_path
 
 
-# -----------------------
-# MLflow
-# -----------------------
 def log_mlflow(
     tracking_uri: str,
     experiment: str,
@@ -301,9 +283,6 @@ def log_mlflow(
         LOG.info("MLflow run logged: %s", run.info.run_id)
 
 
-# -----------------------
-# CLI
-# -----------------------
 def parse_args() -> argparse.Namespace:
     default_clients, default_achats = detect_default_paths()
     parser = argparse.ArgumentParser(description="Scoring clients (propension & valeur 12 mois)")
