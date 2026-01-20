@@ -8,6 +8,11 @@ services:
       - mongo_data:/data/db
     networks:
       - elt-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   flask-api:
     build:
@@ -15,12 +20,15 @@ services:
       dockerfile: serving_api/Dockerfile
     container_name: gold-flask-api
     environment:
-      MONGO_URI: mongodb://mongodb:27017
-      MONGO_DB: gold_serving
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo-serving:27017}
+      MONGO_DB: ${MONGO_DB:-gold_serving}
+      FLASK_HOST: ${FLASK_HOST:-0.0.0.0}
+      FLASK_PORT: ${FLASK_PORT:-5000}
     ports:
       - "5000:5000"
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - elt-network
     volumes:
@@ -36,7 +44,8 @@ services:
     volumes:
       - metabase_data:/metabase-data
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - elt-network
 
@@ -46,11 +55,12 @@ services:
     ports:
       - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_SERVER: mongo-serving
       ME_CONFIG_BASICAUTH_USERNAME: admin
       ME_CONFIG_BASICAUTH_PASSWORD: admin
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - elt-network
 

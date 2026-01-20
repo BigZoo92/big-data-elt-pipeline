@@ -1,0 +1,61 @@
+services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: streamlit-dashboard
+    command: ["streamlit", "run", "scripts/dashboard.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_SECURE: "false"
+      SERVING_API_URL: http://flask-api:5000
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/opt/app
+    depends_on:
+      minio:
+        condition: service_healthy
+      flask-api:
+        condition: service_started
+    networks:
+      - elt-network
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: mlflow-ui
+    command: ["mlflow", "ui", "--host", "0.0.0.0", "--port", "5001", "--backend-store-uri", "/mlruns", "--default-artifact-root", "/mlruns"]
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./mlruns:/mlruns
+      - ./mlflow.db:/mlflow.db
+    networks:
+      - elt-network
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    command: ["sleep", "infinity"]
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_SECURE: "false"
+      PREFECT_API_URL: http://prefect-server:4200/api
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo-serving:27017}
+      MONGO_DB: ${MONGO_DB:-gold_serving}
+    volumes:
+      - ./:/opt/app
+    depends_on:
+      minio:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - elt-network

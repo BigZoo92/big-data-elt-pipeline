@@ -1,26 +1,20 @@
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
+# Virtualenv and Python cache
 .venv*/
-venv/
-ENV/
+__pycache__/
+*.pyc
 
+# Environment
 .env
-.env.*
-!.env.example
 
-mlruns/
+# Data and outputs
+data/spark_lake/**
+data/spark_tmp/**
+data/advisor/**
+data/metrics/**
+mlruns/**
 mlflow.db
+*.log
 
-data/spark_tmp/
-data/spark_lake/
-data/advisor/
-data/metrics/*.tmp
-
-data/sources/
-
+# OS junk
 .DS_Store
-.vscode/
-.idea/
+Thumbs.db
