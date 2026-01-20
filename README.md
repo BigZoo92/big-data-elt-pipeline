@@ -1,112 +1,193 @@
-# Pipeline analytique – électroménager (bronze/silver/gold)
+# Pipeline analytique – Électroménager (bronze / silver / gold)
 
-## Décisions KEEP / REMOVE / REPLACE
+Ce projet met en place un mini pipeline ELT sur des données d’achats d’électroménager, avec :
+- stockage en “lake” (bronze/silver/gold) en Parquet,
+- une version Pandas + une version Spark (pour comparer),
+- un “serving” MongoDB + API Flask,
+- un dashboard Streamlit (KPIs + benchmarks),
+- Metabase pour explorer les collections,
+- MLflow pour suivre les runs d’entraînement (advisor / predictor).
 
-### Features
+---
+## Données et features
+<img width="1907" height="862" alt="Capture d&#39;écran 2026-01-20 161155" src="https://github.com/user-attachments/assets/7b45131e-92e5-4cff-90a2-bbccb678bdba" />
+<img width="1904" height="1061" alt="fb7f9cf2-1ae1-4af4-b5da-ff3a1585c863" src="https://github.com/user-attachments/assets/985b8475-b3cb-43ab-aafd-18e830a0f6f4" />
+<img width="1918" height="867" alt="Capture d&#39;écran 2026-01-20 161535" src="https://github.com/user-attachments/assets/1c2309b9-3727-4740-b9e8-836255a5405a" />
+<img width="1906" height="857" alt="Capture d&#39;écran 2026-01-20 161549" src="https://github.com/user-attachments/assets/c858c98a-7967-46a9-8599-416183899a1e" />
+<img width="1918" height="866" alt="Capture d&#39;écran 2026-01-20 161727" src="https://github.com/user-attachments/assets/664d74cb-b806-4d2e-bc08-77ebda0762d8" />
 
-- [KEEP] `id_client`, `nom`, `email`, `pays`, `date_inscription`
-- [KEEP] Transactions `id_achat`, `id_client`, `date_achat`, `montant`, `produit`
-- [KEEP] RFM 12 mois : `freq_12m`, `monetary_12m`, `monetary_avg_12m`, `recency_days`, `tenure_days`, `product_diversity_12m`
-- [KEEP] Santé relation client : `total_orders_all`, `total_spend_all`, `avg_order_value_all`
-- [REPLACE] `churn_risk_90j` → `prob_reachat_12m` (propension réaliste vs cycles longs)
-- [REPLACE] `spend_pred_90d` → `expected_value_12m` + `value_at_risk_12m`
-- [REMOVE] Toute métrique churn court terme (30/90j), croissance hebdo et ratios non actionnables
+## Données et features
 
-### Tables gold
+### Données sources (keep)
+- Clients : `id_client`, `nom`, `email`, `pays`, `date_inscription`
+- Achats : `id_achat`, `id_client`, `date_achat`, `montant`, `produit`
 
-- [KEEP] `fact_achats.parquet` (achats normalisés + mois/pays)
-- [KEEP] `dim_clients.parquet` (identité + first/last purchase, recency, tenure, total_orders/spend)
-- [KEEP] `client_features.parquet` (RFM 12m + tenure/diversité)
-- [KEEP] `client_scores.parquet` (features + prob_reachat_12m, expected_value_12m, value_at_risk_12m, segment_label)
-- [KEEP] `segment_summary.parquet` (agrégats par segment)
-- [KEEP] `ca_monthly.parquet`, `ca_country.parquet`, `ca_product.parquet`
-- [KEEP] `cohort_first_purchase.parquet` (cohortes simples par 1er achat)
-- [REMOVE] Artefacts churn ou fichiers de croissance court terme
+### Features (keep)
+- RFM 12 mois : `freq_12m`, `monetary_12m`, `monetary_avg_12m`, `recency_days`, `tenure_days`, `product_diversity_12m`
+- Santé relation client : `total_orders_all`, `total_spend_all`, `avg_order_value_all`
 
-## Objectifs prédictifs retenus (max 2)
+### Changement (replace)
+- `churn_risk_90j` → `prob_reachat_12m` (plus cohérent sur des cycles longs)
+- `spend_pred_90d` → `expected_value_12m` + `value_at_risk_12m`
 
-1. Propension de ré-achat à 12 mois (`prob_reachat_12m`) via heuristique RFM (fréquence + récence + valeur + diversité produit).
-2. Valeur attendue 12 mois (`expected_value_12m`) et valeur à risque (`value_at_risk_12m`) pour prioriser réactivation/upsell.
+### Suppressions (remove)
+- métriques churn court terme (30/90j) + artefacts de “croissance hebdo” non actionnables
 
-## Pipeline à lancer (depuis la racine)
+---
 
-1. Démarrer MinIO  
-   `docker-compose up -d minio minio-setup`
-2. (Optionnel) Générer des données synthétiques  
-   `python scripts/generate_data.py`
-3. Ingestion & nettoyage
-   - Bronze : `python flows/bronze_ingestion.py`
-   - Silver : `python flows/silver_transformation.py`
-4. Gold (features + scoring + agrégats)  
-   `python flows/gold_transformation.py`
-5. **Spark (nouvelle, en parallèle)**  
-   `python flows_spark/bronze_ingestion_spark.py`  
-   `python flows_spark/silver_transformation_spark.py`  
-   `python flows_spark/gold_transformation_spark.py`
-6. Before benchmark
-   `$py = (Get-Command python).Source`
-   `$py`
-   `$env:PYSPARK_PYTHON = $py`
-   `$env:PYSPARK_DRIVER_PYTHON = $py`
+## Tables Gold (outputs attendus)
 
-7. Benchmark
-   `python -m script.benchmark`
-8. Dashboard Streamlit  
-   `streamlit run scripts/dashboard.py`
+- `fact_achats.parquet` : achats normalisés + `pays`, `mois`
+- `dim_clients.parquet` : identité + first/last purchase, recency, tenure, totals
+- `client_features.parquet` : RFM 12m + diversité + totaux
+- `client_scores.parquet` : features + `prob_reachat_12m`, `expected_value_12m`, `value_at_risk_12m`, `segment_label`
+- `segment_summary.parquet` : agrégats par segment
+- `ca_monthly.parquet`, `ca_country.parquet`, `ca_product.parquet`
+- `cohort_first_purchase.parquet` : cohortes simples par mois de 1er achat
 
-## Gold attendu dans MinIO/gold
+---
 
-- `fact_achats.parquet` : id_achat, id_client, date_achat, montant, produit, pays, mois
-- `dim_clients.parquet` : identité + first/last purchase, recency_days, tenure_days, total_orders, total_spend, avg_order_value
-- `client_features.parquet` : RFM 12m + product_diversity_12m + totals
-- `client_scores.parquet` : features + prob_reachat_12m, expected_value_12m, value_at_risk_12m, segment_label
-- `segment_summary.parquet` : expected_value_12m, value_at_risk_12m, freq_med, recency_med par segment
-- `ca_monthly.parquet`, `ca_country.parquet`, `ca_product.parquet` (CA agrégé)
-- `cohort_first_purchase.parquet` : nouveaux clients et CA par mois de premier achat
+## Objectifs prédictifs (max 2)
 
-## Notes métier (électroménager)
+1. **Propension de ré-achat à 12 mois** (`prob_reachat_12m`) via heuristique RFM.
+2. **Valeur attendue à 12 mois** (`expected_value_12m`) et **valeur à risque** (`value_at_risk_12m`) pour prioriser relance/upsell.
 
-- Cycles d’achat longs et one-shot fréquents → le churn 30/90j n’est pas pertinent.
-- La valeur vient des réachats rares mais élevés : on suit prob_reachat_12m + valeur attendue pour prioriser les relances.
-- Segmentation RFM simple (VIP, Actifs, A relancer, Dormants, A potentiel) basée sur récence/fréquence/valeur.
+---
+
+## Lancer le pipeline (manuel, depuis la racine)
+
+### 0) MinIO (buckets bronze/silver/gold + sources)
+```bash
+docker compose up -d minio minio-setup
+````
+
+### 1) Génération de données (optionnel)
+
+```bash
+python scripts/generate_data.py
+```
+
+### 2) Pipeline Pandas
+
+```bash
+python flows/bronze_ingestion.py
+python flows/silver_transformation.py
+python flows/gold_transformation.py
+```
+
+### 3) Pipeline Spark (en parallèle)
+
+```bash
+python flows_spark/bronze_ingestion_spark.py
+python flows_spark/silver_transformation_spark.py
+python flows_spark/gold_transformation_spark.py
+```
+
+### 4) Benchmark Pandas vs Spark
+
+```bash
+python scripts/benchmark.py --scale 1
+```
+
+Résultats : `data/metrics/benchmark.json` (visible aussi dans le dashboard Streamlit).
+
+### 5) Dashboard Streamlit
+
+```bash
+streamlit run scripts/dashboard.py
+```
+
+---
+
+## Serving Mongo + API + Metabase
+
+### Démarrage (stack serving)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.serving.yml up -d \
+  minio minio-setup mongodb flask-api metabase
+```
+
+### Publication Gold → Mongo (idempotent)
+
+```bash
+python serving_mongo/publish_gold_to_mongo.py
+```
+
+Le script lit MinIO en priorité, avec fallback local si besoin.
+
+### Endpoints API Flask (port 5000)
+
+* `/health`
+* `/kpis`
+* `/monthly`, `/monthly_growth`
+* `/by_country`, `/by_product`
+* `/distribution`, `/daily`, `/weekly`
+* `/segments`, `/scores`, `/cohort`
+
+Les réponses sont en JSON avec `meta.query_ms`. Si une collection est vide : `503`.
+
+---
+
+## Mapping Gold → Mongo → API
+
+| Parquet gold                                       | Collection Mongo                                                | Endpoint API                                    |
+| -------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
+| fact_achats.parquet                                | gold_fact_achats                                                | /kpis (agg), /daily, /weekly, /distribution     |
+| dim_clients.parquet                                | gold_dim_clients                                                | (Metabase)                                      |
+| client_features.parquet                            | gold_client_features                                            | (Metabase)                                      |
+| client_scores.parquet                              | gold_client_scores                                              | /kpis (expected), /scores                       |
+| segment_summary.parquet                            | gold_segment_summary                                            | /segments                                       |
+| ca_monthly.parquet                                 | gold_monthly                                                    | /monthly, /monthly_growth                       |
+| ca_country.parquet                                 | gold_by_country                                                 | /by_country                                     |
+| ca_product.parquet                                 | gold_by_product                                                 | /by_product                                     |
+| cohort_first_purchase.parquet                      | gold_cohort_first_purchase                                      | /cohort                                         |
+| dérivés (daily/weekly/distribution/monthly_growth) | gold_daily, gold_weekly, gold_distribution, gold_monthly_growth | /daily, /weekly, /distribution, /monthly_growth |
+
+---
+
+## Metabase
+
+* URL : [http://localhost:3000](http://localhost:3000)
+* Connexion Mongo :
+
+  * **Hôte** : `mongodb` (si Metabase est dans Docker)
+  * **Port** : `27017`
+  * **Database** : `gold_serving` (ou `MONGO_DB` si configuré)
+  * **User/Password** : vides (selon config)
+
+Collections utiles : `gold_fact_achats`, `gold_monthly`, `gold_by_country`, `gold_by_product`, `gold_client_scores`, `gold_segment_summary`.
+
+---
+
+## Notes “métier” (électroménager)
+
+* Cycles d’achat longs + achats one-shot fréquents → churn 30/90j peu pertinent.
+* On suit plutôt `prob_reachat_12m` + valeur attendue pour prioriser les relances.
+* Segmentation RFM simple (VIP / Actifs / À relancer / Dormants / À potentiel).
+
+---
 
 ## Validation légère
 
-- `python scripts/check_gold.py` liste les fichiers gold et valide colonnes + montants non négatifs + dates parsées.
-- Assertions dans les flows : montants > 0 et < 10k, colonnes obligatoires, présence de dates achetées.
+```bash
+python scripts/check_gold.py
+```
 
-## Références rapides
+Le script liste les fichiers gold et vérifie : colonnes attendues, dates parsées, montants non négatifs.
 
-- HORIZON scoring : 365 jours (12 mois)
-- Buckets MinIO : sources → bronze → silver → gold
-- Parquet pour toutes les tables silver/gold
-- RFM : recency = jours depuis le dernier achat, frequency = nb d’achats, monetary = CA cumulé/12m
-- `prob_reachat_12m` = score heuristique RFM normalisé ; `expected_value_12m` = valeur mensuelle moyenne x 12 x probabilité
+---
 
-## Spark (optionnel) et benchmark
+## Spark & benchmark (rappel)
 
-- Cluster Spark : `docker-compose -f docker-compose.spark.yml up -d spark-master spark-worker-1 spark-worker-2`
-- Pipeline Spark parallèle (ne remplace pas Pandas) : `python flows_spark/bronze_ingestion_spark.py`, puis silver/gold équivalents.
-- Benchmark Pandas vs Spark : `python scripts/benchmark.py --scale 1` → résultats dans `data/metrics/benchmark.json` (onglet Benchmark du dashboard).
-## Serving Mongo + API + Metabase
+* La version Spark ne remplace pas Pandas : elle sert surtout à comparer.
+* Les résultats du benchmark sont affichés dans l’onglet “Benchmark” du dashboard.
 
-- Compose d�di� : `docker-compose -f docker-compose.yml -f docker-compose.serving.yml up -d minio minio-setup mongodb flask-api metabase` (optionnel: `mongo-express`). Tout tourne sur le network `elt-network` (le compose principal le cr�e).
-- Publication gold -> Mongo (idempotent) : `python serving_mongo/publish_gold_to_mongo.py` (lit MinIO en priorit�, fallback local `data/spark_lake/gold` si pr�sent).
-- Mapping Parquet -> Collections -> API :
+---
 
-| Parquet gold | Collection Mongo | Endpoint API |
-| --- | --- | --- |
-| fact_achats.parquet | gold_fact_achats | /kpis (agg), /daily, /weekly, /distribution |
-| dim_clients.parquet | gold_dim_clients | (Metabase) |
-| client_features.parquet | gold_client_features | (Metabase) |
-| client_scores.parquet | gold_client_scores | /kpis (expected), /scores |
-| segment_summary.parquet | gold_segment_summary | /segments |
-| ca_monthly.parquet | gold_monthly | /monthly, /monthly_growth |
-| ca_country.parquet | gold_by_country | /by_country |
-| ca_product.parquet | gold_by_product | /by_product |
-| cohort_first_purchase.parquet | gold_cohort_first_purchase | /cohort |
-| d�riv�s (daily/weekly/distribution/monthly_growth) | gold_daily, gold_weekly, gold_distribution, gold_monthly_growth | /daily, /weekly, /distribution, /monthly_growth |
+## Difficultés rencontrées (résumé)
 
-- API Flask (port 5000) : `/health`, `/kpis`, `/monthly`, `/by_country`, `/by_product`, `/distribution`, `/daily`, `/weekly`, `/monthly_growth`, `/segments`, `/scores`, `/cohort`. R�ponses JSON simples avec `meta.query_ms` et 503 si collection vide.
-- Dashboard Streamlit : mode par d�faut "API (Mongo)" avec fallback "Parquet direct". Nouvel onglet "Benchmark refresh" (Parquet direct vs API+Mongo) qui alimente `data/metrics/refresh_benchmark.json`.
-- Metabase : http://localhost:3000 (volume persistant). Connexion Mongo : host `mongodb`, port `27017`, database `MONGO_DB` (d�faut `gold_serving`), user/pass vides (selon votre config). Collections utiles : gold_fact_achats, gold_monthly, gold_by_country, gold_by_product, gold_client_scores, gold_segment_summary.
+* Spark/Hadoop sous Windows : setup natif fragile → passage à Docker pour stabiliser.
+* Mismatch de versions Python driver/worker avec PySpark → alignement des versions.
+* Problèmes de réseau Docker (localhost vs nom de service) → correction via `MONGO_URI` côté API.
+* Conflit de ports (API 5000 / MLflow) → MLflow déplacé en **5001**.
