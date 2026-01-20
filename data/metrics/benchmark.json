@@ -1,0 +1,26 @@
+[
+  {
+    "timestamp": "2026-01-20T12:52:19Z",
+    "dataset_size": 23663,
+    "scale": 1,
+    "durations": {
+      "pandas": {
+        "bronze": 1.5852993999997125,
+        "silver": 1.6915146999999706,
+        "gold": 2.1976493000001938,
+        "total": 5.474463399999877
+      },
+      "spark": {
+        "bronze": 34.55202630000031,
+        "silver": 45.012936499999796,
+        "gold": 39.0004799000003,
+        "total": 118.5654427000004
+      }
+    },
+    "environment": {
+      "machine": "BigZooComputer",
+      "os": "Windows",
+      "spark_master": "local[*]"
+    }
+  }
+]

@@ -1,0 +1,17 @@
+prefect
+minio
+pandas
+pyarrow
+faker
+streamlit
+plotly
+python-dotenv
+requests
+pymongo
+flask
+flask-cors
+numpy
+scikit-learn
+mlflow
+matplotlib
+pyspark==3.5
