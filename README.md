@@ -65,9 +65,6 @@
 
 ## Notes gold -> Mongo -> API
 
-- Parquet -> collections : fact_achats -> gold_fact_achats, dim_clients -> gold_dim_clients, client_features -> gold_client_features, client_scores -> gold_client_scores, segment_summary -> gold_segment_summary, ca_monthly -> gold_monthly (+ gold_monthly_growth), ca_country -> gold_by_country, ca_product -> gold_by_product, cohort_first_purchase -> gold_cohort_first_purchase, dérivés -> gold_daily/gold_weekly/gold_distribution.
-- Idempotence : upsert sur fact/dim/features/scores, replace sur agrégats.
-
 ## Difficultés rencontrées
 
 - Spark/Hadoop sous Windows (winutils/NativeIO) : contourné via images Docker et OpenJDK dans l'image Python.
